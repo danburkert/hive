@@ -1078,24 +1078,26 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       } finally {
         if (!success) {
           ms.rollbackTransaction();
-        } else if (deleteData) {
-          // Delete the data in the partitions which have other locations
-          deletePartitionData(partitionPaths);
-          // Delete the data in the tables which have other locations
-          for (Path tablePath : tablePaths) {
-            deleteTableData(tablePath);
+        } else {
+          if (deleteData) {
+            // Delete the data in the partitions which have other locations
+            deletePartitionData(partitionPaths);
+            // Delete the data in the tables which have other locations
+            for (Path tablePath : tablePaths) {
+              deleteTableData(tablePath);
+            }
+            // Delete the data in the database
+            try {
+              wh.deleteDir(new Path(db.getLocationUri()), true);
+            } catch (Exception e) {
+              LOG.error("Failed to delete database directory: " + db.getLocationUri() +
+                            " " + e.getMessage());
+            }
+            // it is not a terrible thing even if the data is not deleted
           }
-          // Delete the data in the database
-          try {
-            wh.deleteDir(new Path(db.getLocationUri()), true);
-          } catch (Exception e) {
-            LOG.error("Failed to delete database directory: " + db.getLocationUri() +
-                " " + e.getMessage());
+          for (MetaStoreEventListener listener : listeners) {
+            listener.onDropDatabase(new DropDatabaseEvent(db, success, this));
           }
-          // it is not a terrible thing even if the data is not deleted
-        }
-        for (MetaStoreEventListener listener : listeners) {
-          listener.onDropDatabase(new DropDatabaseEvent(db, success, this));
         }
       }
     }
