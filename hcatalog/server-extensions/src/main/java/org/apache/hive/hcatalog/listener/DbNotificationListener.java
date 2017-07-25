@@ -115,15 +115,17 @@ public class DbNotificationListener extends MetaStoreEventListener {
    */
   @Override
   public void onConfigChange(ConfigChangeEvent tableEvent) throws MetaException {
-    String key = tableEvent.getKey();
-    if (key.equals(HiveConf.ConfVars.METASTORE_EVENT_DB_LISTENER_TTL.toString())) {
-      // This weirdness of setting it in our hiveConf and then reading back does two things.
-      // One, it handles the conversion of the TimeUnit.  Two, it keeps the value around for
-      // later in case we need it again.
-      hiveConf.set(HiveConf.ConfVars.METASTORE_EVENT_DB_LISTENER_TTL.name(),
-          tableEvent.getNewValue());
-      cleaner.setTimeToLive(hiveConf.getTimeVar(HiveConf.ConfVars.METASTORE_EVENT_DB_LISTENER_TTL,
-          TimeUnit.SECONDS));
+    if (tableEvent.getStatus()) {
+      String key = tableEvent.getKey();
+      if (key.equals(HiveConf.ConfVars.METASTORE_EVENT_DB_LISTENER_TTL.toString())) {
+        // This weirdness of setting it in our hiveConf and then reading back does two things.
+        // One, it handles the conversion of the TimeUnit.  Two, it keeps the value around for
+        // later in case we need it again.
+        hiveConf.set(HiveConf.ConfVars.METASTORE_EVENT_DB_LISTENER_TTL.name(),
+            tableEvent.getNewValue());
+        cleaner.setTimeToLive(hiveConf.getTimeVar(HiveConf.ConfVars.METASTORE_EVENT_DB_LISTENER_TTL,
+            TimeUnit.SECONDS));
+      }
     }
   }
 
@@ -133,13 +135,15 @@ public class DbNotificationListener extends MetaStoreEventListener {
    */
   @Override
   public void onCreateTable(CreateTableEvent tableEvent) throws MetaException {
-    Table t = tableEvent.getTable();
-    NotificationEvent event =
-        new NotificationEvent(0, now(), EventType.CREATE_TABLE.toString(), msgFactory
-            .buildCreateTableMessage(t, new FileIterator(t.getSd().getLocation())).toString());
-    event.setDbName(t.getDbName());
-    event.setTableName(t.getTableName());
-    process(event, tableEvent);
+    if (tableEvent.getStatus()) {
+      Table t = tableEvent.getTable();
+      NotificationEvent event =
+          new NotificationEvent(0, now(), EventType.CREATE_TABLE.toString(), msgFactory
+              .buildCreateTableMessage(t, new FileIterator(t.getSd().getLocation())).toString());
+      event.setDbName(t.getDbName());
+      event.setTableName(t.getTableName());
+      process(event, tableEvent);
+    }
   }
 
   /**
@@ -148,13 +152,15 @@ public class DbNotificationListener extends MetaStoreEventListener {
    */
   @Override
   public void onDropTable(DropTableEvent tableEvent) throws MetaException {
-    Table t = tableEvent.getTable();
-    NotificationEvent event =
-        new NotificationEvent(0, now(), EventType.DROP_TABLE.toString(), msgFactory
-            .buildDropTableMessage(t).toString());
-    event.setDbName(t.getDbName());
-    event.setTableName(t.getTableName());
-    process(event, tableEvent);
+    if (tableEvent.getStatus()) {
+      Table t = tableEvent.getTable();
+      NotificationEvent event =
+          new NotificationEvent(0, now(), EventType.DROP_TABLE.toString(), msgFactory
+              .buildDropTableMessage(t).toString());
+      event.setDbName(t.getDbName());
+      event.setTableName(t.getTableName());
+      process(event, tableEvent);
+    }
   }
 
   /**
@@ -163,14 +169,16 @@ public class DbNotificationListener extends MetaStoreEventListener {
    */
   @Override
   public void onAlterTable(AlterTableEvent tableEvent) throws MetaException {
-    Table before = tableEvent.getOldTable();
-    Table after = tableEvent.getNewTable();
-    NotificationEvent event =
-        new NotificationEvent(0, now(), EventType.ALTER_TABLE.toString(), msgFactory
-            .buildAlterTableMessage(before, after, tableEvent.getIsTruncateOp()).toString());
-    event.setDbName(after.getDbName());
-    event.setTableName(after.getTableName());
-    process(event, tableEvent);
+    if (tableEvent.getStatus()) {
+      Table before = tableEvent.getOldTable();
+      Table after = tableEvent.getNewTable();
+      NotificationEvent event =
+          new NotificationEvent(0, now(), EventType.ALTER_TABLE.toString(), msgFactory
+              .buildAlterTableMessage(before, after, tableEvent.getIsTruncateOp()).toString());
+      event.setDbName(after.getDbName());
+      event.setTableName(after.getTableName());
+      process(event, tableEvent);
+    }
   }
 
   class FileIterator implements Iterator<String> {
@@ -270,15 +278,17 @@ public class DbNotificationListener extends MetaStoreEventListener {
    */
   @Override
   public void onAddPartition(AddPartitionEvent partitionEvent) throws MetaException {
-    Table t = partitionEvent.getTable();
-    String msg = msgFactory
-        .buildAddPartitionMessage(t, partitionEvent.getPartitionIterator(),
-            new PartitionFilesIterator(partitionEvent.getPartitionIterator(), t)).toString();
-    NotificationEvent event =
-        new NotificationEvent(0, now(), EventType.ADD_PARTITION.toString(), msg);
-    event.setDbName(t.getDbName());
-    event.setTableName(t.getTableName());
-    process(event, partitionEvent);
+    if (partitionEvent.getStatus()) {
+      Table t = partitionEvent.getTable();
+      String msg = msgFactory
+          .buildAddPartitionMessage(t, partitionEvent.getPartitionIterator(),
+              new PartitionFilesIterator(partitionEvent.getPartitionIterator(), t)).toString();
+      NotificationEvent event =
+          new NotificationEvent(0, now(), EventType.ADD_PARTITION.toString(), msg);
+      event.setDbName(t.getDbName());
+      event.setTableName(t.getTableName());
+      process(event, partitionEvent);
+    }
   }
 
   /**
@@ -287,13 +297,15 @@ public class DbNotificationListener extends MetaStoreEventListener {
    */
   @Override
   public void onDropPartition(DropPartitionEvent partitionEvent) throws MetaException {
-    Table t = partitionEvent.getTable();
-    NotificationEvent event =
-        new NotificationEvent(0, now(), EventType.DROP_PARTITION.toString(), msgFactory
-            .buildDropPartitionMessage(t, partitionEvent.getPartitionIterator()).toString());
-    event.setDbName(t.getDbName());
-    event.setTableName(t.getTableName());
-    process(event, partitionEvent);
+    if (partitionEvent.getStatus()) {
+      Table t = partitionEvent.getTable();
+      NotificationEvent event =
+          new NotificationEvent(0, now(), EventType.DROP_PARTITION.toString(), msgFactory
+              .buildDropPartitionMessage(t, partitionEvent.getPartitionIterator()).toString());
+      event.setDbName(t.getDbName());
+      event.setTableName(t.getTableName());
+      process(event, partitionEvent);
+    }
   }
 
   /**
@@ -302,14 +314,16 @@ public class DbNotificationListener extends MetaStoreEventListener {
    */
   @Override
   public void onAlterPartition(AlterPartitionEvent partitionEvent) throws MetaException {
-    Partition before = partitionEvent.getOldPartition();
-    Partition after = partitionEvent.getNewPartition();
-    NotificationEvent event =
-        new NotificationEvent(0, now(), EventType.ALTER_PARTITION.toString(), msgFactory
-            .buildAlterPartitionMessage(partitionEvent.getTable(), before, after, partitionEvent.getIsTruncateOp()).toString());
-    event.setDbName(before.getDbName());
-    event.setTableName(before.getTableName());
-    process(event, partitionEvent);
+    if (partitionEvent.getStatus()) {
+      Partition before = partitionEvent.getOldPartition();
+      Partition after = partitionEvent.getNewPartition();
+      NotificationEvent event =
+          new NotificationEvent(0, now(), EventType.ALTER_PARTITION.toString(), msgFactory
+              .buildAlterPartitionMessage(partitionEvent.getTable(), before, after, partitionEvent.getIsTruncateOp()).toString());
+      event.setDbName(before.getDbName());
+      event.setTableName(before.getTableName());
+      process(event, partitionEvent);
+    }
   }
 
   /**
@@ -318,12 +332,14 @@ public class DbNotificationListener extends MetaStoreEventListener {
    */
   @Override
   public void onCreateDatabase(CreateDatabaseEvent dbEvent) throws MetaException {
-    Database db = dbEvent.getDatabase();
-    NotificationEvent event =
-        new NotificationEvent(0, now(), EventType.CREATE_DATABASE.toString(), msgFactory
-            .buildCreateDatabaseMessage(db).toString());
-    event.setDbName(db.getName());
-    process(event, dbEvent);
+    if (dbEvent.getStatus()) {
+      Database db = dbEvent.getDatabase();
+      NotificationEvent event =
+          new NotificationEvent(0, now(), EventType.CREATE_DATABASE.toString(), msgFactory
+              .buildCreateDatabaseMessage(db).toString());
+      event.setDbName(db.getName());
+      process(event, dbEvent);
+    }
   }
 
   /**
@@ -332,12 +348,14 @@ public class DbNotificationListener extends MetaStoreEventListener {
    */
   @Override
   public void onDropDatabase(DropDatabaseEvent dbEvent) throws MetaException {
-    Database db = dbEvent.getDatabase();
-    NotificationEvent event =
-        new NotificationEvent(0, now(), EventType.DROP_DATABASE.toString(), msgFactory
-            .buildDropDatabaseMessage(db).toString());
-    event.setDbName(db.getName());
-    process(event, dbEvent);
+    if (dbEvent.getStatus()) {
+      Database db = dbEvent.getDatabase();
+      NotificationEvent event =
+          new NotificationEvent(0, now(), EventType.DROP_DATABASE.toString(), msgFactory
+              .buildDropDatabaseMessage(db).toString());
+      event.setDbName(db.getName());
+      process(event, dbEvent);
+    }
   }
 
   /**
@@ -346,12 +364,14 @@ public class DbNotificationListener extends MetaStoreEventListener {
    */
   @Override
   public void onCreateFunction(CreateFunctionEvent fnEvent) throws MetaException {
-    Function fn = fnEvent.getFunction();
-    NotificationEvent event =
-        new NotificationEvent(0, now(), EventType.CREATE_FUNCTION.toString(), msgFactory
-            .buildCreateFunctionMessage(fn).toString());
-    event.setDbName(fn.getDbName());
-    process(event, fnEvent);
+    if (fnEvent.getStatus()) {
+      Function fn = fnEvent.getFunction();
+      NotificationEvent event =
+          new NotificationEvent(0, now(), EventType.CREATE_FUNCTION.toString(), msgFactory
+              .buildCreateFunctionMessage(fn).toString());
+      event.setDbName(fn.getDbName());
+      process(event, fnEvent);
+    }
   }
 
   /**
@@ -360,12 +380,14 @@ public class DbNotificationListener extends MetaStoreEventListener {
    */
   @Override
   public void onDropFunction(DropFunctionEvent fnEvent) throws MetaException {
-    Function fn = fnEvent.getFunction();
-    NotificationEvent event =
-        new NotificationEvent(0, now(), EventType.DROP_FUNCTION.toString(), msgFactory
-            .buildDropFunctionMessage(fn).toString());
-    event.setDbName(fn.getDbName());
-    process(event, fnEvent);
+    if (fnEvent.getStatus()) {
+      Function fn = fnEvent.getFunction();
+      NotificationEvent event =
+          new NotificationEvent(0, now(), EventType.DROP_FUNCTION.toString(), msgFactory
+              .buildDropFunctionMessage(fn).toString());
+      event.setDbName(fn.getDbName());
+      process(event, fnEvent);
+    }
   }
 
   /**
@@ -374,12 +396,14 @@ public class DbNotificationListener extends MetaStoreEventListener {
    */
   @Override
   public void onAddIndex(AddIndexEvent indexEvent) throws MetaException {
-    Index index = indexEvent.getIndex();
-    NotificationEvent event =
-        new NotificationEvent(0, now(), EventType.CREATE_INDEX.toString(), msgFactory
-            .buildCreateIndexMessage(index).toString());
-    event.setDbName(index.getDbName());
-    process(event, indexEvent);
+    if (indexEvent.getStatus()) {
+      Index index = indexEvent.getIndex();
+      NotificationEvent event =
+          new NotificationEvent(0, now(), EventType.CREATE_INDEX.toString(), msgFactory
+              .buildCreateIndexMessage(index).toString());
+      event.setDbName(index.getDbName());
+      process(event, indexEvent);
+    }
   }
 
   /**
@@ -388,12 +412,14 @@ public class DbNotificationListener extends MetaStoreEventListener {
    */
   @Override
   public void onDropIndex(DropIndexEvent indexEvent) throws MetaException {
-    Index index = indexEvent.getIndex();
-    NotificationEvent event =
-        new NotificationEvent(0, now(), EventType.DROP_INDEX.toString(), msgFactory
-            .buildDropIndexMessage(index).toString());
-    event.setDbName(index.getDbName());
-    process(event, indexEvent);
+    if (indexEvent.getStatus()) {
+      Index index = indexEvent.getIndex();
+      NotificationEvent event =
+          new NotificationEvent(0, now(), EventType.DROP_INDEX.toString(), msgFactory
+              .buildDropIndexMessage(index).toString());
+      event.setDbName(index.getDbName());
+      process(event, indexEvent);
+    }
   }
 
   /**
@@ -402,13 +428,15 @@ public class DbNotificationListener extends MetaStoreEventListener {
    */
   @Override
   public void onAlterIndex(AlterIndexEvent indexEvent) throws MetaException {
-    Index before = indexEvent.getOldIndex();
-    Index after = indexEvent.getNewIndex();
-    NotificationEvent event =
-        new NotificationEvent(0, now(), EventType.ALTER_INDEX.toString(), msgFactory
-            .buildAlterIndexMessage(before, after).toString());
-    event.setDbName(before.getDbName());
-    process(event, indexEvent);
+    if (indexEvent.getStatus()) {
+      Index before = indexEvent.getOldIndex();
+      Index after = indexEvent.getNewIndex();
+      NotificationEvent event =
+          new NotificationEvent(0, now(), EventType.ALTER_INDEX.toString(), msgFactory
+              .buildAlterIndexMessage(before, after).toString());
+      event.setDbName(before.getDbName());
+      process(event, indexEvent);
+    }
   }
 
   class FileChksumIterator implements Iterator<String> {
@@ -438,15 +466,17 @@ public class DbNotificationListener extends MetaStoreEventListener {
   }
   @Override
   public void onInsert(InsertEvent insertEvent) throws MetaException {
-    Table tableObj = insertEvent.getTableObj();
-    NotificationEvent event =
-        new NotificationEvent(0, now(), EventType.INSERT.toString(), msgFactory.buildInsertMessage(tableObj,
-                insertEvent.getPartitionObj(), insertEvent.isReplace(),
-            new FileChksumIterator(insertEvent.getFiles(), insertEvent.getFileChecksums()))
-                .toString());
-    event.setDbName(tableObj.getDbName());
-    event.setTableName(tableObj.getTableName());
-    process(event, insertEvent);
+    if (insertEvent.getStatus()) {
+      Table tableObj = insertEvent.getTableObj();
+      NotificationEvent event =
+          new NotificationEvent(0, now(), EventType.INSERT.toString(), msgFactory.buildInsertMessage(tableObj,
+                  insertEvent.getPartitionObj(), insertEvent.isReplace(),
+              new FileChksumIterator(insertEvent.getFiles(), insertEvent.getFileChecksums()))
+                  .toString());
+      event.setDbName(tableObj.getDbName());
+      event.setTableName(tableObj.getTableName());
+      process(event, insertEvent);
+    }
   }
 
   /**
